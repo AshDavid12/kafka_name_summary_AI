@@ -22,10 +22,11 @@ import logging
 
 load_dotenv('.env')
 COHERE_API_KEY = os.getenv('COHERE_API_KEY')
-transcript = "this person Barak Obama. Donald Trump"
+transcript = "Bill Gates. Trump"
 
 class NameList(BaseModel):
     names: List[str]
+    cho:str
 
 
 def streamlit_run():
@@ -78,7 +79,7 @@ def LLM(transcript: object) -> object:
     return response
 
 
-async def send_to_kafka(topic, response):
+async def send_to_kafka(topic, response,cho):
     """
 
     :type response: object
@@ -87,9 +88,9 @@ async def send_to_kafka(topic, response):
     producer = AIOKafkaProducer(bootstrap_servers=bootstrap_servers)
     await producer.start()
     try:
-        json_names = response.json()  # Convert the pydantic name list to json for sending
-        await producer.send_and_wait(topic, key=None, value=json_names.encode('utf-8'))
-        print(f'Sent: {json_names}')
+        value = response.json()  # Convert the pydantic name list to json for sending
+        await producer.send_and_wait(topic, key=None, value=json.dumps(value).encode('utf-8'))
+        print(f'Sent: {value}')
     except Exception as e:
         logging.error(f"Failed to send summary to Kafka: {e}")
     finally:
@@ -100,8 +101,10 @@ def main():
     # transcript: str = streamlit_run()
     # if transcript:
     #     response: dict[str, BaseException | None | BaseMessage | dict | NameList] = LLM(transcript)
-    response: dict[str, BaseException | None | BaseMessage | dict | NameList] = LLM(transcript)
-    asyncio.run(send_to_kafka(topic, response))
+    cho = "one word"
+    response = LLM(transcript) #response has the pyndatic model namelist which also contains choice
+    response.cho = cho  #need to set the pydantic model choice attribute
+    asyncio.run(send_to_kafka(topic, response,cho))
 
 
 if __name__ == "__main__":
