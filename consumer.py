@@ -19,6 +19,9 @@ from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTem
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage
 import cohere
+from langchain_cohere import ChatCohere
+from langchain_core.messages import HumanMessage
+from langchain.schema.runnable import RunnablePassthrough
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,32 +43,32 @@ class SummaryResponse(BaseModel):
 kafka_bootstrap_servers = 'localhost:9092'
 
 
-def LLMCohere(name,cho):
+def LLMCohere(name, cho):
     cohere_model = cohere.Client(api_key=COHERE_API_KEY)
-    prompt = f'Generate a {cho} summary about {name}. Do not write more than {cho}. Write only one {cho}'
+    prompt = f'Generate a {cho} summary about {name}. Provide only{cho}.'
     response = cohere_model.generate(
         model='command',
-        prompt=prompt
+        prompt=prompt,
     )
     #logging.info(f"Raw response from Cohere: {response.generations[0].text}")
     summary_text = response.generations[0].text.strip() ##cohere syntax
     summary_response = SummaryResponse(name=name, summary=summary_text) #convert to summary pydantic
     return summary_response
 
-
 def get_summaries(names: List[str], cho: str):
     summary_responses = []
-    for name in names: #name list pydantic take the name attribute
-        response = LLMCohere(name,cho)
+    for name in names:  #name list pydantic take the name attribute
+        response = LLMCohere(name, cho)
         if response:
             summary_responses.append(response)
     return summary_responses
+
 
 async def consume_messages():
     consumer = AIOKafkaConsumer(
         'names',
         bootstrap_servers=kafka_bootstrap_servers,
-        group_id='plm',
+        group_id='qwwer',
         auto_offset_reset='latest'
     )
     await consumer.start()
@@ -79,7 +82,9 @@ async def consume_messages():
                 msg_pydantic = NameList(**msg_value)  # Convert back to pydantic
                 #await get_wiki(msg_pydantic)
                 logging.info(f'Parsed message: {msg_pydantic}')
-                summaries = get_summaries(msg_pydantic.names,msg_pydantic.cho) #sending namelist pydantic
+
+                summaries = get_summaries(msg_pydantic.names, msg_pydantic.cho)  #sending namelist pydantic
+                print(f"Generated summaries: {summaries}")
                 for summary in summaries:
                     logging.info(f'Summary for {summary.name}: {summary.summary}')
             except Exception as e:

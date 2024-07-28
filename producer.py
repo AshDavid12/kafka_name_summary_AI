@@ -18,15 +18,18 @@ from langchain_core.pydantic_v1 import BaseModel
 from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from dotenv import load_dotenv
 import logging
-
+import cohere
+from langchain_cohere import ChatCohere
 
 load_dotenv('.env')
 COHERE_API_KEY = os.getenv('COHERE_API_KEY')
-transcript = "Bill Gates. Trump"
+
+
+transcript = "Bill Gates."
 
 class NameList(BaseModel):
     names: List[str]
-    cho:str
+    cho: str
 
 
 def streamlit_run():
@@ -73,13 +76,14 @@ def LLM(transcript: object) -> object:
         TRANSCRIPT_MESSAGE_FILTER
     ])
 
-    model = ChatOpenAI(model="gpt-4o", temperature=0)
+    model = ChatCohere()
     chain = prompt | model.with_structured_output(NameList)
     response = chain.invoke({"script": transcript})  # this gives back pydantic model nameslist
+    #print(response)
     return response
 
 
-async def send_to_kafka(topic, response,cho):
+async def send_to_kafka(topic, response, cho):
     """
 
     :type response: object
@@ -100,11 +104,10 @@ async def send_to_kafka(topic, response,cho):
 def main():
     # transcript: str = streamlit_run()
     # if transcript:
-    #     response: dict[str, BaseException | None | BaseMessage | dict | NameList] = LLM(transcript)
-    cho = "one word"
-    response = LLM(transcript) #response has the pyndatic model namelist which also contains choice
-    response.cho = cho  #need to set the pydantic model choice attribute
-    asyncio.run(send_to_kafka(topic, response,cho))
+    cho = "one sentence"
+    response = LLM(transcript)  #response has the pyndatic model namelist which also contains choice
+    response.cho = cho
+    asyncio.run(send_to_kafka(topic, response, cho))
 
 
 if __name__ == "__main__":
