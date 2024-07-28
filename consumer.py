@@ -11,7 +11,6 @@ import httpx
 import uvicorn
 import asyncio
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,6 +19,8 @@ app = FastAPI()
 
 class NameList(BaseModel):
     names: List[str]
+
+
 kafka_bootstrap_servers = 'localhost:9092'
 
 # kafka_config_consumer = {
@@ -67,7 +68,7 @@ async def consume_messages():
     consumer = AIOKafkaConsumer(
         'names',
         bootstrap_servers=kafka_bootstrap_servers,
-        group_id='olkjjjkiii',
+        group_id='olkjjjkiiimnmnjj',
         auto_offset_reset='latest'
     )
     await consumer.start()
@@ -103,8 +104,5 @@ async def produce_messages(article_sum):
 
 
 
-
 if __name__ == "__main__":
     asyncio.run(consume_messages())
-
-
