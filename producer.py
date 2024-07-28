@@ -7,6 +7,8 @@ import asyncio
 from aiokafka import AIOKafkaProducer
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from langchain_core.messages import BaseMessage
+from cohere import Client as CohereClient
+import cohere
 from pydantic import BaseModel
 from confluent_kafka import Producer, Consumer, KafkaException, KafkaError
 import os
@@ -17,8 +19,10 @@ from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTem
 from dotenv import load_dotenv
 import logging
 
-load_dotenv('.env')
 
+load_dotenv('.env')
+COHERE_API_KEY = os.getenv('COHERE_API_KEY')
+transcript = "this person Barak Obama. Donald Trump"
 
 class NameList(BaseModel):
     names: List[str]
@@ -40,11 +44,6 @@ def streamlit_run():
             st.error("Please enter a transcript before submitting.")
 
 
-# kafka set up
-# kafka_config_producer = {
-#     'bootstrap.servers': 'localhost:9092'
-# }
-# producer_paragraph = Producer(kafka_config_producer)
 topic = 'names'
 bootstrap_servers = 'localhost:9092'
 
@@ -55,10 +54,9 @@ def LLM(transcript: object) -> object:
     :param transcript: 
     :return: 
     """
-    # To AI system prompt
     SYSTEM_PROMPT_FILTERING = SystemMessagePromptTemplate.from_template(
         """
-        you will be given the script and you need to extract the names of the people mentioned in the script.
+        You will be given the script and you need to extract the names of the people mentioned in the script. return only the list of names nothing else.
         """
     )
 
@@ -76,7 +74,7 @@ def LLM(transcript: object) -> object:
 
     model = ChatOpenAI(model="gpt-4o", temperature=0)
     chain = prompt | model.with_structured_output(NameList)
-    response = chain.invoke({"script": transcript})  #this gives back pydantic model nameslist
+    response = chain.invoke({"script": transcript})  # this gives back pydantic model nameslist
     return response
 
 
@@ -99,10 +97,11 @@ async def send_to_kafka(topic, response):
 
 
 def main():
-    transcript: str = streamlit_run()
-    if transcript:
-        response: dict[str, BaseException | None | BaseMessage | dict | NameList] = LLM(transcript)
-        asyncio.run(send_to_kafka(topic, response))
+    # transcript: str = streamlit_run()
+    # if transcript:
+    #     response: dict[str, BaseException | None | BaseMessage | dict | NameList] = LLM(transcript)
+    response: dict[str, BaseException | None | BaseMessage | dict | NameList] = LLM(transcript)
+    asyncio.run(send_to_kafka(topic, response))
 
 
 if __name__ == "__main__":
